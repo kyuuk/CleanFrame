@@ -18,6 +18,8 @@ The public app uses Manrope, Geist and Newsreader. A personal widget containing 
 | --- | --- |
 | Simple Icons service marks | CC0; exact revisions and adaptations in `app/assets/icons/SOURCES.json` and `ADDITIONAL-SOURCES.json`. The CC0 text is retained beside the icons. |
 | Disney+, ABC and SBS marks | [Custom Brand Icons](https://github.com/elax46/custom-brand-icons), MIT. The retained licence is `app/assets/icons/CUSTOM-BRAND-ICONS-LICENSE.txt`. ABC and SBS sources were replaced during the public-source review. Exact revisions, source files and extraction/recolour notes are in `SOURCES.json`. |
+| OQEE by Free mark | Adapted from [Logo Oqee.png](https://commons.wikimedia.org/wiki/File:Logo_Oqee.png) by Free, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). The traced `app/assets/icons/oqee.svg` is shared under the same licence; details in `ADDITIONAL-SOURCES.json`. |
+| Litefin mark | Adapted from the [Litefin](https://github.com/MoazSalem/litefin) logo, [MPL 2.0](https://mozilla.org/MPL/2.0/). `app/assets/icons/litefin.svg` carries the MPL notice and is its own source form. |
 | Art, apps, settings and home outlines | Original CleanFrame drawings, covered by the project's MIT licence. |
 
 Brand marks identify services. Their owners retain trademark rights; this project claims no endorsement or affiliation. The older Australian TV icon archive's GPL text is retained for historical provenance only; no current icon uses that archive.

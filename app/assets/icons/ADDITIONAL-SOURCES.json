@@ -16,5 +16,19 @@
     "source": "https://github.com/simple-icons/simple-icons/blob/develop/icons/tubi.svg",
     "licence": "CC0-1.0",
     "note": "Shape unchanged; white fill for launcher."
+  },
+  {
+    "icon": "oqee",
+    "source": "https://commons.wikimedia.org/wiki/File:Logo_Oqee.png",
+    "author": "Free (oqee.tv)",
+    "licence": "CC-BY-SA-4.0",
+    "note": "Red OQ letters traced at half coverage to one white even-odd path; the 'free' wordmark is omitted. This adaptation is CC BY-SA 4.0; notice is in the SVG."
+  },
+  {
+    "icon": "litefin",
+    "source": "https://github.com/MoazSalem/litefin/blob/development/assets/icon_oblong.png",
+    "author": "Moaz Salem and Litefin contributors",
+    "licence": "MPL-2.0",
+    "note": "Fin mark traced at half coverage to one white even-odd path; the wordmark and gradient are omitted. The SVG carries the MPL 2.0 notice and is its own source form."
   }
 ]
