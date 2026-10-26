@@ -125,7 +125,7 @@ async function group(name) {
 }
 const settingsSnapshot = () => current.evaluate(() => {
   const s = ShoreQA.state();
-  const rendered = [...document.getElementById('stage').classList].filter(c => /^(bg|l|a|u|f|m|font|clk)-/.test(c)).sort();
+  const rendered = [...document.getElementById('stage').classList].filter(c => /^(bg|l|a|u|f|m|font|clk|date)-/.test(c)).sort();
   return { stored: localStorage.getItem('cleanframe.home.v1'), committed: s.committed, shown: s.shown, rendered, writes: s.writes, storageAttempts: window.__storageAttempts };
 });
 const choice = (axis, value) => act('choice.' + axis + '.' + value);
@@ -458,6 +458,7 @@ try {
       ['layout', 'apps', ['icons', 'text', 'both']],
       ['layout', 'controls', ['text', 'both', 'icons']],
       ['layout', 'clock', ['24h', '12h']],
+      ['layout', 'date', ['on', 'off']],
       ['typography', 'font', (await state()).fonts.available],
       ['focus', 'focus', ['type', 'glass']],
       ['focus', 'material', ['frost', 'tint', 'soft']]
@@ -471,7 +472,7 @@ try {
         const after = await settingsSnapshot(), rows = await radios();
         const expectedWrites = before.writes + (before.committed[axis] === value ? 0 : 1);
         const untouched = { ...after.committed, [axis]: before.committed[axis] };
-        const prefix = { bg: 'bg', layout: 'l', apps: 'a', controls: 'u', focus: 'f', material: 'm', font: 'font', clock: 'clk' }[axis];
+        const prefix = { bg: 'bg', layout: 'l', apps: 'a', controls: 'u', focus: 'f', material: 'm', font: 'font', clock: 'clk', date: 'date' }[axis];
         const shown = !Object.hasOwn(after.shown, axis) || after.shown[axis] === value;
         check(axis + ' OK applies ' + value + ' once', after.committed[axis] === value && shown && after.rendered.includes(prefix + '-' + value) && same(untouched, before.committed) && expectedWrites === after.writes && after.storageAttempts - before.storageAttempts === expectedWrites - before.writes && rows.some(r => r.action === 'choice.' + axis + '.' + value && r.checked === 'true'), { before, after, rows });
       }
@@ -860,6 +861,9 @@ try {
     check('Live clock defaults to 12-hour with AM/PM', /^\s*\d{1,2}:\d{2}(AM|PM)\s*$/.test(clock), clock);
     await look({ clock: '24h' }); const clock24 = await current.locator('#caption .clock').textContent();
     check('24-hour clock has a leading zero and no AM/PM', /^\s*\d{2}:\d{2}\s*$/.test(clock24) && Number(clock24.slice(0, 2)) === new Date().getHours(), clock24);
+    check('Date is hidden by default', await current.locator('#caption .clock-date').count() === 0);
+    await look({ date: 'on' }); const date = await current.locator('#caption .clock-date').textContent();
+    check('Date shows weekday, day and month', /^(Sun|Mon|Tues|Wednes|Thurs|Fri|Satur)day \d{1,2} [A-Z][a-z]+$/.test(date) && Number(date.split(' ')[1]) === new Date().getDate(), date);
   });
   await run('Open rotation and browser fallback', async () => {
     await page({ seed: baseline({ mode: 'open' }) }); check('Open mode advances at cold start', (await state()).wallpaper === walls[1].id);
