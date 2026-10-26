@@ -349,6 +349,7 @@
       focus: pick(modern.focus, LOOK_VALUES.focus, legacyList ? 'type' : 'glass'), material: pick(modern.material, LOOK_VALUES.material, 'soft'),
       font: pick(modern.font, LOOK_VALUES.font, 'manrope'), clock: pick(modern.clock, LOOK_VALUES.clock, '12h'), date: pick(modern.date, LOOK_VALUES.date, 'off'), wall: wall(modern.wall || s.wallpaper) ? modern.wall || s.wallpaper : WALLS[0].id,
       home: h, recent: recent, lastApp: h.indexOf(s.lastApp) >= 0 ? s.lastApp : h[0],
+      homeDefault: typeof s.homeDefault === 'boolean' ? s.homeDefault : h.join() === PRIMARY.join(),
       mode: pick(s.mode, MODES.map(function (m) { return m.id; }), 'fixed'), order: pick(s.order, ORDERS, 'sequence'), idle: pick(s.idle, IDLES, 'off'),
       bag: (Array.isArray(s.bag) ? s.bag : []).filter(function (id, i, list) { return typeof id === 'string' && wall(id) && list.indexOf(id) === i; })
     };
@@ -375,7 +376,7 @@
   }
   function clearSession() { S.undo = []; S.removedAt = {}; S.note = null; S.err = null; }
   function begin() { S.note = null; }
-  function next(home, recent) { var c = lookOf(S.c); c.home = home; c.recent = recent; c.lastApp = S.c.lastApp; c.mode = S.c.mode; c.order = S.c.order; c.bag = S.c.bag.slice(); c.idle = S.c.idle; return c; }
+  function next(home, recent) { var c = lookOf(S.c); c.home = home; c.recent = recent; c.lastApp = S.c.lastApp; c.homeDefault = S.c.homeDefault; c.mode = S.c.mode; c.order = S.c.order; c.bag = S.c.bag.slice(); c.idle = S.c.idle; return c; }
   /* Shuffle draws from a saved bag, so each photo shows once per cycle and never twice in a row. */
   function rotate(c) {
     var bag, i;
@@ -388,7 +389,9 @@
   }
   function snap() { return { home: S.c.home.slice(), recent: S.c.recent.slice() }; }
   function pushRecent(list, id) { return [id].concat(without(list, id)).slice(0, 5); }
+  var syncingHome = false;
   function write(c, label) {
+    if (!syncingHome && c.home.join() !== S.c.home.join()) c.homeDefault = false;
     try { localStorage.setItem(KEY, JSON.stringify(serialise(c))); }
     catch (e) { storageOk = false; S.failed++; S.err = label; log('Not saved: ' + label); return false; }
     if (c.wall !== S.c.wall || c.mode !== S.c.mode) resetRotation();
@@ -477,8 +480,9 @@
     S.press = id; S.lastLaunch = a.name;
     perform(a.name, function (done) { FrameDevice.launchApp(a.appId, done); });
   }
-  function refreshCatalog() {
+  function refreshCatalog(sync) {
     var request, oldFocus;
+    if (sync) catalog.sync = true;
     if (catalog.loading) return;
     request = ++catalog.request; catalog.loading = true; catalog.error = null;
     FrameDevice.apps(function (err, entries) {
@@ -486,7 +490,7 @@
       catalog.loading = false;
       if (err) { catalog.error = err.message || 'Could not read installed apps.'; if (!catalog.loaded) ALPHA = []; render(); return; }
       oldFocus = top().id === 'apps' ? ALPHA[top().f.i] : null;
-      ALPHA = [];
+      ALPHA = []; catalog.ranked = [];
       entries.forEach(function (entry) {
         var id = PRIMARY.indexOf(entry.brand) >= 0 ? entry.brand : entry.appId, a;
         if (!safeId(id) || !safeId(entry.appId) || ALPHA.indexOf(id) >= 0) return;
@@ -495,13 +499,30 @@
         a.appId = entry.appId; a.brand = entry.brand || ''; a.mark = !!entry.brand;
         a.icon = safeIcon(entry.icon);
         a.name = PRIMARY.indexOf(id) >= 0 ? PRIMARY_APPS[PRIMARY.indexOf(id)].name : String(entry.name).slice(0, 160);
-        ALPHA.push(id);
+        ALPHA.push(id); catalog.ranked.push(id);
       });
       ALPHA.sort(function (a, b) { return app(a).name.toLowerCase().localeCompare(app(b).name.toLowerCase()); });
       catalog.loaded = true; catalog.error = null; catalog.revision++;
       if (top().id === 'apps' && oldFocus && ALPHA.indexOf(oldFocus) >= 0) top().f.i = ALPHA.indexOf(oldFocus);
+      if (catalog.sync && top().id === 'home') { catalog.sync = false; syncHome(); }
       norm(); render();
     });
+  }
+
+  /* Home shows installed apps only. An untouched default Home becomes every installed
+     app with a built-in mark, in brand order; an edited Home just loses missing apps. */
+  function syncHome() {
+    var installed = function (id) { return ALPHA.indexOf(id) >= 0; }, marked, h, recent, c;
+    if (!ALPHA.length) return;
+    marked = catalog.ranked.filter(function (id) { return app(id).mark; }).slice(0, CAP);
+    h = S.c.homeDefault && marked.length ? marked : S.c.home.filter(installed);
+    if (!h.length) h = marked.length ? marked : catalog.ranked.slice(0, CAP);
+    recent = S.c.recent.filter(function (id) { return installed(id) && h.indexOf(id) < 0; });
+    if (h.join() === S.c.home.join() && recent.join() === S.c.recent.join()) return;
+    c = next(h, recent);
+    if (h.indexOf(c.lastApp) < 0) c.lastApp = h[0];
+    syncingHome = true; write(c, 'Installed apps'); syncingHome = false;
+    if (h.indexOf(S.sel) < 0) setSel(c.lastApp);
   }
 
   /* ---------- Navigation targets ---------- */
@@ -1792,6 +1813,7 @@
     S.idle = false; clearTimeout(idleTimer);
     if (idleAllowed()) idleTimer = setTimeout(function () { if (idleAllowed()) { S.idle = true; render(); } }, IDLE_SECONDS[S.c.idle] * QA.secondMs);
   }
+  function syncInstalled() { if (window.tizen) refreshCatalog(true); }
   function updateClock() {
     clearTimeout(clockTimer);
     if (document.hidden) return;
@@ -1872,11 +1894,11 @@
   });
   document.addEventListener('keyup', function (ev) { delete heldKeys[ev.keyCode]; });
   window.addEventListener('blur', function () { heldKeys = {}; });
-  window.addEventListener('focus', function () { release(); focusStage(); after(); updateClock(); });
+  window.addEventListener('focus', function () { release(); focusStage(); after(); updateClock(); syncInstalled(); });
   document.addEventListener('visibilitychange', function () {
     heldKeys = {};
     if (document.hidden) { pauseRotation(); clearTimeout(clockTimer); clearTimeout(idleTimer); }
-    else { release(); after(); updateClock(); focusStage(); }
+    else { release(); after(); updateClock(); focusStage(); syncInstalled(); }
   });
   window.addEventListener('resize', fit);
 
@@ -1915,4 +1937,5 @@
   initialise();
   setLook({}, { transient: true, startup: true });
   norm(); render(); fit(); focusStage(); updateClock(); syncRotation();
+  syncInstalled();
 })();

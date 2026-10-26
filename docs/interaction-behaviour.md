@@ -35,7 +35,7 @@ The selected font applies to Home app names, the clock and Home controls, includ
 
 ## Streaming apps
 
-The nine default apps keep their known native IDs. Other installed consumer apps can also be added to Home. Launching uses the public `tizen.application.launch` API with the app's native ID. Missing apps and denied launches produce a real error. No web player, placeholder success page or account credential is embedded.
+Home shows installed apps only. The installed-app list is read at startup and on each return to CleanFrame; apps that are no longer installed leave Home and Recently removed. An untouched default Home becomes every installed app with a built-in mark (the nine defaults, then Spotify, HBO Max, Tubi, OQEE by Free and Litefin), in that order, up to nine. Once Home is edited, it only loses missing apps. Known apps keep their native IDs. Other installed consumer apps can also be added to Home. Launching uses the public `tizen.application.launch` API with the app's native ID. Missing apps and denied launches produce a real error. No web player, placeholder success page or account credential is embedded.
 
 ## All apps
 

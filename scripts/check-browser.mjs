@@ -254,6 +254,22 @@ try {
       await closePage();
     }
   });
+  await run('Home shows installed apps only', async () => {
+    const installed = CATALOG.filter(a => !['IkWsFHtOY9.Stremio', 'MCmYXNxgcu.DisneyPlus', 'mWK87Xghap.ABCiview'].includes(a.id)).concat([
+      { id: 'znCs95n93Q.OqeeTV', name: 'OQEE by Free', show: true, iconPath: '' }, { id: 'LitefinApp.Litefin', name: 'Litefin', show: true, iconPath: '' }]);
+    await page({ catalog: installed });
+    await current.waitForFunction(() => !ShoreQA.state().dock.includes('stremio'));
+    const home = (await stored()).dock;
+    check('Default Home drops missing apps and adds installed marked apps', !home.includes('disneyplus') && !home.includes('abciview') && home.includes('netflix') && home.includes('LitefinApp.Litefin') && home.length === 9, home);
+    check('Default Home keeps brand order', home.indexOf('netflix') < home.indexOf('youtube') && home.indexOf('applemusic') < home.indexOf(SPOTIFY), home);
+    const marks = await current.locator('#stage [data-action="home.app.LitefinApp.Litefin"] .mark').count();
+    check('Litefin uses its built-in mark', marks === 1 || (await state()).look.apps === 'text');
+    await closePage();
+    await page({ catalog: installed, seed: baseline({ dock: ['youtube', 'stremio', 'netflix'], homeDefault: false, recent: ['disneyplus', 'sbs'] }) });
+    await current.waitForFunction(() => !ShoreQA.state().dock.includes('stremio'));
+    check('Edited Home only loses missing apps', (await stored()).dock.join() === 'youtube,netflix', (await stored()).dock);
+    check('Recently removed drops missing apps', (await stored()).recent.join() === 'sbs', (await stored()).recent);
+  });
   await run('Real catalogue and native launch boundary', async () => {
     await page(); await library();
     const names = await current.locator('[data-action^="apps.open."] .label').allTextContents();
