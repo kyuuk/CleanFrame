@@ -865,6 +865,24 @@ try {
     await look({ date: 'on' }); const date = await current.locator('#caption .clock-date').textContent();
     check('Date shows weekday, day and month', /^(Sun|Mon|Tues|Wednes|Thurs|Fri|Satur)day \d{1,2} [A-Z][a-z]+$/.test(date) && Number(date.split(' ')[1]) === new Date().getDate(), date);
   });
+  await run('Shuffle rotation', async () => {
+    await page({ minuteMs: 40 }); await group('background'); await act('background.rotation');
+    check('Order row is hidden while rotation is Fixed', !(await call('actions')).includes('choice.order.shuffle'));
+    await act('rotation.5');
+    check('Order row appears with an interval', (await call('actions')).includes('choice.order.shuffle'));
+    await act('choice.order.shuffle');
+    check('Shuffle is saved', (await stored()).order === 'shuffle' && (await stored()).mode === '5');
+    await scene('home');
+    const seen = [(await state()).wallpaper];
+    while (seen.length < walls.length) {
+      await current.waitForFunction(id => ShoreQA.state().wallpaper !== id, seen.at(-1), { timeout: 6000 });
+      seen.push((await state()).wallpaper);
+    }
+    check('Shuffle shows every photo once per cycle', new Set(seen).size === walls.length, seen);
+    check('Shuffle order differs from the gallery order', seen.some((id, i) => id !== walls[i].id), seen);
+    const bag = (await stored()).bag;
+    check('Shuffle bag is saved for the next start', Array.isArray(bag) && !bag.includes((await stored()).wallpaper));
+  });
   await run('Open rotation and browser fallback', async () => {
     await page({ seed: baseline({ mode: 'open' }) }); check('Open mode advances at cold start', (await state()).wallpaper === walls[1].id);
     const first = (await state()).wallpaper;
