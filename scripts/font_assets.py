@@ -9,6 +9,8 @@ import json
 import re
 import zipfile
 
+from own_photos import photo_overlay
+
 ROOT = Path(__file__).resolve().parents[1]
 PUBLIC_FONT_IDS = ['geist', 'newsreader']
 PRIVATE_FONTS = [
@@ -68,6 +70,7 @@ def write_widget_archive(output, root=ROOT, include_private=True):
     """Create an unsigned archive without reading signing or device settings."""
     app = root / 'app'
     overlay = font_overlay(root, include_private)
+    overlay.update(photo_overlay(root, include_private))
     with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED, allowZip64=False) as package:
         for source in sorted(app.rglob('*')):
             if source.is_symlink():

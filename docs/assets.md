@@ -37,4 +37,20 @@ The retained generator covers all fifteen filenames and writes `.local/materials
 
 For another photo, add its source/credit to `SOURCES.json`, prepare its background and thumbnail, add the gallery entry in `catalog.js`, generate the four registered materials and panel backdrop, then measure and review its foreground metadata. Keep the crop identical across all assets. Run source and browser checks before packaging.
 
+## Your own photos
+
+A personal build can add the owner's photos after the bundled gallery. They stay in ignored `.local/photos/` and are never committed or included in `npm run export:public`.
+
+1. Put JPEG or PNG files in `.local/photos/`. The name shown in Settings comes from the filename: `lake-annecy.jpg` becomes Lake Annecy.
+2. Optionally add a file with the same base name and `.json`, such as `lake-annecy.json`:
+   ```json
+   {"name": "Lake Annecy", "focus": [0.5, 0.3], "look": {"tone": "dark"}}
+   ```
+   `focus` moves the 16:9 crop (0 to 1 across and down; the default is the centre). `look` overrides any derived field: `tone`, `ut`, `frostVeil`, `listColumn`, `dockQuiet` or `clockMist`.
+3. To show only your photos, create `.local/photos/cleanframe.json` with `{"hideBundled": true}`.
+4. Run `npm run photos`. It crops each photo to 1920 x 1080, renders the thumbnail, panel backdrop and four registered materials with the same recipe as the bundled gallery (`scripts/materials/recipe.js`), and derives foreground metadata from zone brightness, calibrated against the reviewed gallery. Output goes to `.local/photos/build/`. It warns above 30 photos.
+5. Review `.local/photos/build/preview-sheet.jpg`, which shows each photo in List and Dock, and adjust `focus` or `look` if text is hard to read.
+
+`npm run dev` and `npm run package` then include the build. Packaging stops if `.local/photos` changed since the last `npm run photos`, or if `hideBundled` is set without photos. Browser checks, `npm run dev:public` and the public export always use only the bundled gallery. Own photos have no adaptive-ink palette; they use the derived `ut` foreground choices.
+
 Source pages and licence observations are recorded in [asset sources](asset-sources.md).
