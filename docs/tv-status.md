@@ -36,6 +36,10 @@ The 0.6.1 installation and launch responses are command evidence. Current render
 
 Browser and package checks establish source behaviour and archive contents. CPU-throttled Chromium timings are development comparisons; they are not TV benchmarks. Current browser checks are described in [testing](testing.md).
 
+## Second TV: Tizen 8
+
+An owner's ED50T01UHD-RE (firmware T-24RSSFUCVTDEUC-1241.0, Tizen 8) is not a Frame. Its installed-app list on 26 October had no `org.tizen.art-app`, so CleanFrame hides Art Mode there. It has `com.samsung.tv.coba.setting`, but TV settings opened through it did not work; the owner confirmed that launching `org.tizen.menu` shows the settings menu. The updated build has not yet been installed on this TV.
+
 ## Native Home and recovery
 
 Native Home/startup was configured separately on 19 October. A guarded one-shot helper ran as the SDK user. Original typed values were saved privately before apply; exact-value restore/readback and reapply passed. The latest recorded readback assigns CleanFrame to Home, startup and boot-backup, with Home autostart enabled. The first-screen type still names Samsung Home.

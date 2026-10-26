@@ -42,7 +42,7 @@ async function run(name, fn) {
 async function closePage() { if (current) { current.__closing = true; await current.close(); current = null; } }
 
 // Production still calls its unmodified device.js adapter.
-function installHarness({ seed, legacy, mock, catalog, minuteMs, catalogFailure, noFontAPI, storageFailure }) {
+function installHarness({ seed, legacy, mock, catalog, minuteMs, catalogFailure, noFontAPI, storageFailure, noArt, platform }) {
   if (!sessionStorage.getItem('__cleanframe_seeded')) {
     if (seed !== undefined) localStorage.setItem('cleanframe.home.v1', typeof seed === 'string' ? seed : JSON.stringify(seed));
     if (legacy !== undefined) localStorage.setItem('cleanframe.shore.v1', typeof legacy === 'string' ? legacy : JSON.stringify(legacy));
@@ -68,12 +68,17 @@ function installHarness({ seed, legacy, mock, catalog, minuteMs, catalogFailure,
   window.tizen = {
     ApplicationControlData: function (key, value) { this.key = key; this.value = value; },
     ApplicationControl: function (operation, uri, mime, category, data) { Object.assign(this, { operation, uri, mime, category, data }); },
+    ...(platform ? { systeminfo: { getCapability: key => key === 'http://tizen.org/feature/platform.version' ? platform : undefined } } : {}),
     application: {
       getAppsInfo(ok, fail) {
         const tv = window.__tv;
         tv.catalogCalls++;
         const finish = () => tv.catalogFailure ? fail({ name: 'UnknownError', message: 'Catalogue unavailable for QA' }) : ok(tv.catalog.map(a => ({ ...a })));
         if (tv.holdCatalog) tv.pending.push({ ok, fail }); else setTimeout(finish, 0);
+      },
+      getAppInfo(id) {
+        if (noArt && id === 'org.tizen.art-app') throw { name: 'NotFoundError', message: 'Art app not installed for QA' };
+        return { id };
       },
       launch(id, ok, fail) {
         const tv = window.__tv; tv.calls.push({ method: 'launch', id });
@@ -233,6 +238,21 @@ try {
     await closePage();
     await page({ seed: baseline({ mode: 'open' }), storageFailure: true });
     check('Failed open-mode write retains prior photo', (await state()).wallpaper === walls[0].id && (await stored()).wallpaper === walls[0].id);
+  });
+  await run('Art Mode hidden without the Art app', async () => {
+    await page({ noArt: true }); await scene('home');
+    const controls = await current.locator('#stage [data-action^="util."]').evaluateAll(els => els.map(e => e.getAttribute('data-action')));
+    check('Home controls omit Art Mode', controls.join() === 'util.apps,util.settings', controls);
+    await nav('up', 'ok'); await current.waitForFunction(() => ShoreQA.where().view === 'apps');
+    check('First control opens All apps', (await current.evaluate(() => __tv.calls.length)) === 0);
+  });
+  await run('TV settings target follows the platform', async () => {
+    for (const [platform, id] of [['8.0', 'org.tizen.menu'], ['9.0', 'com.samsung.tv.coba.setting']]) {
+      await page({ platform }); await group('samsung'); await act('samsung.settings');
+      await current.waitForFunction(() => __tv.calls.length === 1);
+      check('Tizen ' + platform + ' TV settings opens ' + id, (await current.evaluate(() => __tv.calls[0])).id === id);
+      await closePage();
+    }
   });
   await run('Real catalogue and native launch boundary', async () => {
     await page(); await library();

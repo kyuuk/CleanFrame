@@ -15,8 +15,15 @@
   var EXTRA_BRANDS = {'rJeHak5zRg.Spotify': 'spotify', '5b8c3eb16b.BeamCTVDev': 'hbomax', '3KA0pm7a7V.TubiTV': 'tubi'};
   var INTERNAL = ['adplatform.ADPlayer', 'WykOS4t4F0.cmsWebApp', '25emanual3.emanual',
     'ZODRT12q2l.WebAccountExtension', 'ByJlgt0XeD.CastSettingsApp', 'tv6pbVMQFF.PrivacyChoices'];
-  var SELF = 'nClrkHome1.FrameHome';
+  var SELF = 'nClrkHome1.FrameHome', ART = 'org.tizen.art-app';
   function api() { return window.tizen && window.tizen.application; }
+  /* false only when the TV reports the app missing; the browser preview cannot tell. */
+  function installed(id) {
+    if (!api() || typeof api().getAppInfo !== 'function') return null;
+    try { return !!api().getAppInfo(id); }
+    catch (err) { return err && err.name === 'NotFoundError' ? false : null; }
+  }
+  function hasArt() { return installed(ART) !== false; }
   function unavailable(done) {
     done({ message: 'Open CleanFrame on the TV to use this control.', detail: 'The web preview cannot control the TV.' });
   }
@@ -44,11 +51,19 @@
     try {
       var data = [new tizen.ApplicationControlData('mode', ['fullscreen']), new tizen.ApplicationControlData('requester', ['mobile'])];
       var control = new tizen.ApplicationControl('http://tizen.org/appcontrol/operation/default', null, null, null, data);
-      api().launchAppControl(control, 'org.tizen.art-app', function () { finish(null); }, function (err) { finish(failure(err)); });
+      api().launchAppControl(control, ART, function () { finish(null); }, function (err) { finish(failure(err)); });
     } catch (err) { finish(failure(err)); }
   }
   function home(done) { launchApp('com.samsung.tv.csfs', done); }
-  function settings(done) { launchApp('com.samsung.tv.coba.setting', done); }
+  /* Tizen 8 installs com.samsung.tv.coba.setting but only org.tizen.menu shows the settings menu. */
+  function platformMajor() {
+    try { return parseInt(window.tizen.systeminfo.getCapability('http://tizen.org/feature/platform.version'), 10) || 0; }
+    catch (err) { return 0; }
+  }
+  function settings(done) {
+    var major = platformMajor();
+    launchApp(major && major < 9 && installed('org.tizen.menu') !== false ? 'org.tizen.menu' : 'com.samsung.tv.coba.setting', done);
+  }
   function apps(done) {
     if (!api()) { unavailable(done); return; }
     var finish = bounded(done);
@@ -70,5 +85,5 @@
       }, function (err) { finish(failure(err)); });
     } catch (err) { finish(failure(err)); }
   }
-  window.FrameDevice = { launch: launch, launchApp: launchApp, art: art, home: home, settings: settings, apps: apps };
+  window.FrameDevice = { launch: launch, launchApp: launchApp, art: art, hasArt: hasArt, home: home, settings: settings, apps: apps };
 }());
