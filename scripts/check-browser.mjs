@@ -42,13 +42,13 @@ async function run(name, fn) {
 async function closePage() { if (current) { current.__closing = true; await current.close(); current = null; } }
 
 // Production still calls its unmodified device.js adapter.
-function installHarness({ seed, legacy, mock, catalog, minuteMs, catalogFailure, noFontAPI, storageFailure, noArt, platform }) {
+function installHarness({ seed, legacy, mock, catalog, minuteMs, catalogFailure, noFontAPI, storageFailure, noArt, platform, secondMs }) {
   if (!sessionStorage.getItem('__cleanframe_seeded')) {
     if (seed !== undefined) localStorage.setItem('cleanframe.home.v1', typeof seed === 'string' ? seed : JSON.stringify(seed));
     if (legacy !== undefined) localStorage.setItem('cleanframe.shore.v1', typeof legacy === 'string' ? legacy : JSON.stringify(legacy));
     sessionStorage.setItem('__cleanframe_seeded', '1');
   }
-  window.ShoreQA = { minuteMs };
+  window.ShoreQA = { minuteMs, secondMs };
   window.__failWrites = !!storageFailure;
   window.__storageAttempts = 0;
   const set = Storage.prototype.setItem;
@@ -882,6 +882,24 @@ try {
     check('Shuffle order differs from the gallery order', seen.some((id, i) => id !== walls[i].id), seen);
     const bag = (await stored()).bag;
     check('Shuffle bag is saved for the next start', Array.isArray(bag) && !bag.includes((await stored()).wallpaper));
+  });
+  await run('Idle dim', async () => {
+    await page({ secondMs: 20 }); await group('background');
+    await act('choice.idle.30s'); check('Idle dim is saved', (await stored()).idle === '30s');
+    await look({ bg: 'dark' }); check('Idle dim row is hidden on a flat background', !(await call('actions')).includes('choice.idle.30s'));
+    await scene('home'); await current.waitForTimeout(900);
+    check('Flat background never dims', !(await state()).idle);
+    await look({ bg: 'photo' }); await scene('home');
+    await current.waitForFunction(() => ShoreQA.state().idle, null, { timeout: 4000 });
+    check('Photo Home dims after the idle time', await current.locator('#stage.is-idle').count() === 1);
+    check('Clock stays visible while dimmed', await current.locator('#caption .clock').evaluate(e => getComputedStyle(e).opacity) === '1');
+    const before = await state(); await current.keyboard.press('Enter');
+    const woken = await state();
+    check('First key only wakes', !woken.idle && woken.selected === before.selected && woken.view === 'home' && (await current.evaluate(() => __tv.calls.length)) === 0);
+    await current.keyboard.press('ArrowRight');
+    check('Next key acts normally', (await state()).selected !== before.selected);
+    await nav('up'); await act('util.settings'); await current.waitForTimeout(900);
+    check('Panels never dim', !(await state()).idle);
   });
   await run('Open rotation and browser fallback', async () => {
     await page({ seed: baseline({ mode: 'open' }) }); check('Open mode advances at cold start', (await state()).wallpaper === walls[1].id);

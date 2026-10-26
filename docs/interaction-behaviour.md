@@ -9,6 +9,7 @@
 - Back from the app list or Dock opens a choice to stay or open Samsung Home.
 - A panel keeps focus within its own controls. Back closes one panel at a time.
 - Returning to the running launcher keeps the selected app or panel item. There is no auto-return timer. Held OK and Back keys act once until the key is released.
+- Idle dim (Settings → Background, Photo only): Off, 30 s, 2 min or 5 min without input on Home fades the apps, Home controls and their scrims, leaving the photo, clock and date. The first key or click only wakes Home, without moving focus or opening anything. Panels and flat backgrounds never dim; the row is hidden on Light and Dark and its choice is kept. Timed rotation continues while dimmed.
 - The manifest sets `reload="disable"` for Smart Hub resume (`eden_resume`) and default launch requests, so opening CleanFrame's icon while it is still running resumes it instead of reloading the page. `background-support="enable"` keeps the hidden launcher alive, which removed the TV's loading screen on resume in an owner's Smart Hub test. Clock and rotation timers still stop while hidden. The TV can still close a hidden app, for example under memory pressure; it then starts fresh with its saved preferences.
 - A cold start shows the TV's own loading screen. A `<tizen:video_splash_screen>` declaration was tested on an owner's TV: without `video` the widget would not install, and with an H.264 video it installed but the TV still showed its default screen.
 ## Settings and appearance
@@ -17,7 +18,7 @@ Settings opens a grouped overview: Background, Layout, Typography, Focus, Apps o
 
 | Group | Choices |
 | --- | --- |
-| Background | Photo, Light, Dark; Wallpaper and Rotation when Photo is active |
+| Background | Photo, Light, Dark; Wallpaper, Rotation and Idle dim when Photo is active |
 | Layout | List or Dock; independent Text, Icons or Both choices for apps and Home controls; 12-hour or 24-hour clock; date on or off |
 | Typography | Manrope, Neue Montreal, Mori, Pangram Sans, Geist and Newsreader, when available |
 | Focus | Type or Glass; Soft, Frost or Clear tint material |
