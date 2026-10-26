@@ -35,9 +35,10 @@
     { id: '5', name: 'Every 5 minutes', min: 5 }, { id: '15', name: 'Every 15 minutes', min: 15 },
     { id: '60', name: 'Every hour', min: 60 }
   ];
+  var NIGHTS = ['off', 'dark', 'dim'], NIGHT_DIMS = ['soft', 'strong'], NIGHT_STARTS = ['18', '19', '20', '21', '22', '23', '0', '1'], NIGHT_ENDS = ['5', '6', '7', '8', '9', '10'];
   var ORDERS = ['sequence', 'shuffle'], IDLES = ['off', '30s', '2m', '5m'], IDLE_SECONDS = { '30s': 30, '2m': 120, '5m': 300 };
   var KEY = 'cleanframe.home.v1', storageOk = true, catalog = { loading: false, loaded: false, error: null, request: 0, revision: 0 };
-  var QA = window.ShoreQA = { minuteMs: window.ShoreQA && window.ShoreQA.minuteMs || 60000, secondMs: window.ShoreQA && window.ShoreQA.secondMs || 1000 };
+  var QA = window.ShoreQA = { minuteMs: window.ShoreQA && window.ShoreQA.minuteMs || 60000, secondMs: window.ShoreQA && window.ShoreQA.secondMs || 1000, hour: window.ShoreQA ? window.ShoreQA.hour : undefined };
   var FONTS = {
     manrope: { name: 'Manrope', family: 'Manrope', display: 600, ui: 500, clock: 500 },
     montreal: { name: 'Neue Montreal', family: 'Study Montreal', display: 300, ui: 400, clock: 300 },
@@ -50,7 +51,7 @@
   var LOOK_KEYS = ['bg', 'layout', 'apps', 'font', 'controls', 'focus', 'material', 'clock', 'date'];
   var LOOK_VALUES = { bg: ['dark', 'light', 'photo'], layout: ['list', 'dock'], apps: ['icons', 'both', 'text'], font: Object.keys(FONTS).filter(function (id) { return id === 'manrope' || PRIVATE_FONTS.indexOf(id) >= 0; }), controls: ['icons', 'both', 'text'], focus: ['type', 'glass'], material: ['soft', 'frost', 'tint'], clock: ['12h', '24h'], date: ['off', 'on'] };
   var LOOK_NAMES = { bg: 'Background', layout: 'Layout', apps: 'Apps', font: 'Font', controls: 'Home controls', focus: 'Focus', material: 'Material', clock: 'Clock', date: 'Date' };
-  var VALUE_NAMES = { dark: 'Dark', light: 'Light', photo: 'Photo', list: 'List', dock: 'Dock', type: 'Type', glass: 'Glass', soft: 'Soft', frost: 'Frost', tint: 'Clear tint', icons: 'Icons', both: 'Icons and text', text: 'Text', '12h': '12-hour', '24h': '24-hour', off: 'Off', on: 'On', sequence: 'In order', shuffle: 'Shuffle', '30s': '30 s', '2m': '2 min', '5m': '5 min' };
+  var VALUE_NAMES = { dark: 'Dark', light: 'Light', photo: 'Photo', list: 'List', dock: 'Dock', type: 'Type', glass: 'Glass', soft: 'Soft', frost: 'Frost', tint: 'Clear tint', icons: 'Icons', both: 'Icons and text', text: 'Text', '12h': '12-hour', '24h': '24-hour', off: 'Off', on: 'On', sequence: 'In order', shuffle: 'Shuffle', '30s': '30 s', '2m': '2 min', '5m': '5 min', dim: 'Dimmed', strong: 'Strong' };
   var UTIL = { art: ['Art Mode', 'art'], apps: ['All apps', 'apps'], arrange: ['Arrange', 'arrange'], settings: ['Settings', 'settings'] };
   var MSG = {
     leave: { title: 'Leave Home?', line: 'Open Samsung Home?', note: '', actions: [['stay', 'Stay'], ['samsung', 'Samsung Home']] }
@@ -81,7 +82,7 @@
     undo: [], removedAt: {}, note: null, err: null,
     writes: 0, failed: 0, log: [], logN: 0, lastLaunch: null, press: null,
     wallShown: null, wallPending: null, wallError: null,
-    shown: null, pending: null, lookError: null, idle: false, bundleKey: null, previewBundle: null, reflow: false, fontSwitch: false
+    shown: null, pending: null, lookError: null, idle: false, night: false, nightFade: false, bundleKey: null, previewBundle: null, reflow: false, fontSwitch: false
   };
   var scroll = { first: 0, off: 0, photo: 0, photoArrange: 0 };
   function pick(v, list, fallback) {
@@ -90,6 +91,9 @@
     return fallback;
   }
   function lookOf(c) { return { bg: c.bg, wall: c.wall, layout: c.layout, apps: c.apps, font: c.font, controls: c.controls, focus: c.focus, material: c.material, clock: c.clock, date: c.date }; }
+  /* Night is a temporary look on Home; saved choices and the Settings preview stay as set. */
+  function nightShown() { return S.night && S.c.night !== 'off' && !isSettingsDetail(top()); }
+  function shownBg() { return !nightShown() ? S.c.bg : S.c.night === 'dim' && S.c.bg === 'photo' ? 'photo' : 'dark'; }
   function materialApplies(c) { c = c || S.c; return c.bg === 'photo' && (c.layout === 'dock' || c.focus === 'glass'); }
   function derivedTheme() { return S.c.layout === 'list' ? 'list' : 'shore'; }
 
@@ -144,7 +148,7 @@
       + (maskSupport ? '<span class="mk" style="' + st + ';-webkit-mask-image:url(' + ICONS + id + '.svg);mask-image:url(' + ICONS + id + '.svg)"></span>' : '<img alt="" src="' + ICONS + id + '.svg" style="' + st + '">') + '</span>';
   }
   function appMark(a, w, h, size) {
-    if (a.mark && (maskSupport || S.c.bg !== 'light')) return markHtml(a.brand || a.id, w, h, size);
+    if (a.mark && (maskSupport || shownBg() !== 'light')) return markHtml(a.brand || a.id, w, h, size);
     var words = a.name.split(/\s+/), letters = words[0].charAt(0) + (words.length > 1 ? words[1].charAt(0) : '');
     return '<span class="mark monogram' + (a.icon ? ' native-icon' : '') + '" style="width:' + w + 'px;height:' + h + 'px;font-size:' + Math.round(size * .65) + 'px"><span>' + esc(letters.toUpperCase()) + '</span>'
       + (a.icon ? '<img alt="" data-native-icon="true" src="' + esc(a.icon) + '">' : '') + '</span>';
@@ -351,6 +355,7 @@
       home: h, recent: recent, lastApp: h.indexOf(s.lastApp) >= 0 ? s.lastApp : h[0],
       homeDefault: typeof s.homeDefault === 'boolean' ? s.homeDefault : h.join() === PRIMARY.join(),
       mode: pick(s.mode, MODES.map(function (m) { return m.id; }), 'fixed'), order: pick(s.order, ORDERS, 'sequence'), idle: pick(s.idle, IDLES, 'off'),
+      night: pick(s.night, NIGHTS, 'off'), nightDim: pick(s.nightDim, NIGHT_DIMS, 'soft'), nightStart: pick(s.nightStart, NIGHT_STARTS, '22'), nightEnd: pick(s.nightEnd, NIGHT_ENDS, '7'),
       bag: (Array.isArray(s.bag) ? s.bag : []).filter(function (id, i, list) { return typeof id === 'string' && wall(id) && list.indexOf(id) === i; })
     };
   }
@@ -376,7 +381,8 @@
   }
   function clearSession() { S.undo = []; S.removedAt = {}; S.note = null; S.err = null; }
   function begin() { S.note = null; }
-  function next(home, recent) { var c = lookOf(S.c); c.home = home; c.recent = recent; c.lastApp = S.c.lastApp; c.homeDefault = S.c.homeDefault; c.mode = S.c.mode; c.order = S.c.order; c.bag = S.c.bag.slice(); c.idle = S.c.idle; return c; }
+  function next(home, recent) { var c = lookOf(S.c); c.home = home; c.recent = recent; c.lastApp = S.c.lastApp; c.homeDefault = S.c.homeDefault; c.mode = S.c.mode; c.order = S.c.order; c.bag = S.c.bag.slice(); c.idle = S.c.idle;
+    c.night = S.c.night; c.nightDim = S.c.nightDim; c.nightStart = S.c.nightStart; c.nightEnd = S.c.nightEnd; return c; }
   /* Shuffle draws from a saved bag, so each photo shows once per cycle and never twice in a row. */
   function rotate(c) {
     var bag, i;
@@ -541,7 +547,7 @@
   function addAppsRoute() { openEditor('home'); }
   function openSettings() { push({ id: 'settings', f: { id: S.settingsFocus } }); }
   function openAppearance(group) {
-    var axis = { background: 'bg', layout: 'layout', typography: 'font', focus: 'focus' }[group];
+    var axis = { background: 'bg', layout: 'layout', typography: 'font', focus: 'focus', night: 'night' }[group];
     var action = S.detailFocus[group] || (axis ? 'choice.' + axis + '.' + S.c[axis] : group === 'rotation' ? 'rotation.' + S.c.mode : 'samsung.home');
     push({ id: 'appearance', group: group, f: { action: action } });
   }
@@ -856,6 +862,7 @@
       { id: 'layout', label: 'Layout', value: VALUE_NAMES[S.c.layout] },
       { id: 'typography', label: 'Typography', value: FONTS[S.c.font].name },
       { id: 'focus', label: 'Focus', value: VALUE_NAMES[S.c.focus] + (materialApplies() ? ', ' + VALUE_NAMES[S.c.material] : '') },
+      { id: 'night', label: 'Night', value: S.c.night === 'off' ? 'Off' : VALUE_NAMES[S.c.night] + ', ' + hourLabel(S.c.nightStart) + '–' + hourLabel(S.c.nightEnd) },
       { id: 'editor', label: 'Apps on Home', value: n + (n === 1 ? ' app' : ' apps') },
       { id: 'samsung', label: 'Samsung', value: 'Home and TV settings' }];
   }
@@ -877,10 +884,10 @@
     if (id === 'editor') openEditor('settings');
     else openAppearance(id);
   }
-  var DETAIL_NAMES = { background: 'Background', layout: 'Layout', typography: 'Typography', focus: 'Focus', rotation: 'Rotation', samsung: 'Samsung' };
+  var DETAIL_NAMES = { background: 'Background', layout: 'Layout', typography: 'Typography', focus: 'Focus', rotation: 'Rotation', night: 'Night', samsung: 'Samsung' };
   function choice(axis, value, disabled) {
     return { action: axis === 'mode' ? 'rotation.' + value : 'choice.' + axis + '.' + value, axis: axis, value: value, disabled: !!disabled,
-      label: axis === 'font' ? FONTS[value].name : axis === 'mode' ? MODES.filter(function (m) { return m.id === value; })[0].name : value === 'both' ? 'Both' : VALUE_NAMES[value] };
+      label: axis === 'nightStart' || axis === 'nightEnd' ? hourLabel(value) : axis === 'font' ? FONTS[value].name : axis === 'mode' ? MODES.filter(function (m) { return m.id === value; })[0].name : value === 'both' ? 'Both' : VALUE_NAMES[value] };
   }
   function detailSections(t) {
     var flat = S.c.bg !== 'photo', inactive = !materialApplies();
@@ -908,6 +915,15 @@
       return [{ id: 'mode', title: '', items: options('mode', MODES.map(function (m) { return m.id; }), flat), reason: flat ? 'Choose Photo in Background to use rotation.' : ordered ? '' : pause }]
         .concat(ordered ? [{ id: 'order', title: 'Order', horizontal: true, items: options('order', ORDERS), reason: pause }] : []);
     }
+    if (t.group === 'night') {
+      return [{ id: 'night', title: 'Night look', horizontal: true, items: options('night', NIGHTS), reason: S.c.night === 'off' ? 'Home can switch to Dark, or dim its photo, between set hours.' : '' }]
+        .concat(S.c.night === 'dim' ? [{ id: 'nightDim', title: 'Dimming', horizontal: true, items: options('nightDim', NIGHT_DIMS) }] : [])
+        .concat(S.c.night === 'off' ? [] : [
+          { id: 'nightStart', title: 'Starts', horizontal: true, items: options('nightStart', NIGHT_STARTS.slice(0, 4)) },
+          { id: 'nightStartLate', title: '', horizontal: true, items: options('nightStart', NIGHT_STARTS.slice(4)) },
+          { id: 'nightEnd', title: 'Ends', horizontal: true, items: options('nightEnd', NIGHT_ENDS.slice(0, 3)) },
+          { id: 'nightEndLate', title: '', horizontal: true, items: options('nightEnd', NIGHT_ENDS.slice(3)) }]);
+    }
     return [{ id: 'samsung', title: '', items: [
       { action: 'samsung.home', label: 'Samsung Home', description: 'Open Samsung’s Home screen' },
       { action: 'samsung.settings', label: 'TV settings', description: 'Picture, sound and network settings' }
@@ -934,14 +950,16 @@
     if (column !== undefined) t.f.column = column;
     if (item.axis) S.appearanceFocus = item.axis;
   }
-  var PREF_LABELS = { mode: 'Wallpaper rotation', order: 'Wallpaper order', idle: 'Idle dim' };
+  var PREF_LABELS = { mode: 'Wallpaper rotation', order: 'Wallpaper order', idle: 'Idle dim', night: 'Night look', nightDim: 'Night dimming', nightStart: 'Night start', nightEnd: 'Night end' };
+  var PHOTO_PREFS = { mode: true, order: true, idle: true };
   function applyPref(axis, value) {
     var c, patch = {};
-    if (S.c.bg !== 'photo') return;
+    if (PHOTO_PREFS[axis] && S.c.bg !== 'photo') return;
     S.err = null; S.lookError = null;
     if (value === S.c[axis]) return;
     c = next(S.c.home.slice(), S.c.recent.slice()); c[axis] = value; patch[axis] = value;
     if (!write(c, PREF_LABELS[axis])) S.lookError = { type: 'save', patch: patch, row: axis, transient: false };
+    else S.night = nightNow();
   }
   function detailBack() { cancelLook(); S.err = null; pop(); }
   function detailOk(t, item) {
@@ -962,7 +980,7 @@
   V.appearance = {
     norm: function (t) {
       var rows = detailRows(t), exists = false, applied = null;
-      var axis = { background: 'bg', layout: 'layout', typography: 'font', focus: 'focus', rotation: 'mode' }[t.group];
+      var axis = { background: 'bg', layout: 'layout', typography: 'font', focus: 'focus', rotation: 'mode', night: 'night' }[t.group];
       rows.forEach(function (items) { items.forEach(function (item) {
         if (item.action === t.f.action) exists = true;
         if (item.axis === axis && item.value === S.c[axis]) applied = item;
@@ -1035,9 +1053,9 @@
 
   /* Curated locked palettes keep the existing rendering path exactly. */
   function applyAdaptiveInk(palette) {
-    var active = S.c.bg === 'photo' && palette && !palette.locked && palette.light && palette.tl && palette.tr && palette.br;
-    if (appliedPalette === palette && appliedPhoto === (S.c.bg === 'photo')) return !!active;
-    appliedPalette = palette; appliedPhoto = S.c.bg === 'photo';
+    var active = shownBg() === 'photo' && palette && !palette.locked && palette.light && palette.tl && palette.tr && palette.br;
+    if (appliedPalette === palette && appliedPhoto === (shownBg() === 'photo')) return !!active;
+    appliedPalette = palette; appliedPhoto = shownBg() === 'photo';
     ['tl', 'tr', 'br'].forEach(function (zone) {
       var r = active ? palette[zone] : null;
       var values = r ? { ink: r.ink, 'clock-ink': r.clockInk || r.ink, 'rest-ink': r.restInk, 'peer-ink': r.peerInk, rest: r.restAlpha, peer: r.peerAlpha, under: r.halo, shadow: r.shadow } : {};
@@ -1061,7 +1079,7 @@
   function render() {
     var t = top(), sheet = !!V[t.id].sheet, shown = wall(S.shown ? S.shown.wall : S.c.wall), palette = ADAPTIVE_INK[shown.id];
     var adaptive = applyAdaptiveInk(palette), tr = adaptive && palette.tr ? palette.tr.pol : shown.ut.tr, br = adaptive && palette.br ? palette.br.pol : shown.ut.br;
-    stage.className = 'stage bg-' + S.c.bg + ' l-' + S.c.layout + ' v-' + S.variant + ' m-' + (materialApplies() ? S.c.material : 'none') + ' f-' + S.c.focus + ' a-' + S.c.apps + ' u-' + S.c.controls + ' clk-' + S.c.clock + ' date-' + S.c.date + ' g-' + S.geom + ' tone-' + shown.tone + ' tr-' + tr + ' br-' + br + wallClasses(shown) + inkRungClasses(palette, adaptive) + ' at-' + t.id + ' font-' + homeFont() + (homeFont() !== 'manrope' ? ' font-custom' : '') + (S.fontSwitch ? ' is-font-switch' : '') + (adaptive ? ' has-adaptive-ink adaptive-tl-' + palette.tl.pol : '') + (!adaptive && shown.clockInk ? ' has-clock-ink' : '') + (!adaptive && shown.dockClockInk ? ' has-dock-clock-ink' : '') + (registeredMaterial(shown.id) ? ' registered-material' : '') + (sheet ? ' is-sheet' : '') + (S.reflow ? ' is-reflow' : '') + (S.idle ? ' is-idle' : '');
+    stage.className = 'stage bg-' + shownBg() + ' l-' + S.c.layout + ' v-' + S.variant + ' m-' + (materialApplies() && shownBg() === 'photo' ? S.c.material : 'none') + ' f-' + S.c.focus + ' a-' + S.c.apps + ' u-' + S.c.controls + ' clk-' + S.c.clock + ' date-' + S.c.date + ' g-' + S.geom + ' tone-' + shown.tone + ' tr-' + tr + ' br-' + br + wallClasses(shown) + inkRungClasses(palette, adaptive) + ' at-' + t.id + ' font-' + homeFont() + (homeFont() !== 'manrope' ? ' font-custom' : '') + (S.fontSwitch ? ' is-font-switch' : '') + (adaptive ? ' has-adaptive-ink adaptive-tl-' + palette.tl.pol : '') + (!adaptive && shown.clockInk ? ' has-clock-ink' : '') + (!adaptive && shown.dockClockInk ? ' has-dock-clock-ink' : '') + (registeredMaterial(shown.id) ? ' registered-material' : '') + (sheet ? ' is-sheet' : '') + (S.reflow ? ' is-reflow' : '') + (S.idle ? ' is-idle' : '') + (nightShown() && shownBg() === 'photo' ? ' night-dim night-' + S.c.nightDim : '') + (S.nightFade ? ' is-night-fade' : '');
     if (!adaptive && shown.clockInk) stage.style.setProperty('--clock-ink', shown.clockInk);
     else stage.style.removeProperty('--clock-ink');
     if (!adaptive && shown.dockClockInk) stage.style.setProperty('--dock-clock-ink', shown.dockClockInk);
@@ -1099,6 +1117,22 @@
   }
 
   function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function hourLabel(value) { var h = Number(value); return S.c.clock === '24h' ? pad(h) + ':00' : (h % 12 || 12) + ' ' + (h < 12 ? 'AM' : 'PM'); }
+  function nightNow() {
+    var h = QA.hour !== undefined ? QA.hour : new Date().getHours(), start = Number(S.c.nightStart), end = Number(S.c.nightEnd);
+    if (S.c.night === 'off') return false;
+    return start > end ? h >= start || h < end : h >= start && h < end;
+  }
+  /* A change seen on the minute tick fades through black on Home; on return it just applies. */
+  var nightFadeTimer = 0;
+  function checkNight(animate) {
+    var on = nightNow(), before, after;
+    if (on === S.night) return;
+    before = shownBg(); S.night = on; after = shownBg(); S.night = !on;
+    if (!animate || REDUCED_MOTION || document.hidden || isSettingsDetail(top()) || before === after) { S.night = on; render(); syncRotation(); wake(); return; }
+    S.nightFade = true; render(); clearTimeout(nightFadeTimer);
+    nightFadeTimer = setTimeout(function () { S.night = nightNow(); S.nightFade = false; render(); syncRotation(); wake(); }, 1000);
+  }
   function clockHtml() {
     var d = new Date(), h = d.getHours(), twelve = S.c.clock !== '24h', metrics = fontMetrics[homeFont()];
     var text = (twelve ? h % 12 || 12 : pad(h)) + ':' + pad(d.getMinutes()), ampm = twelve ? '<span class="clock-ampm">' + (h < 12 ? 'AM' : 'PM') + '</span>' : '';
@@ -1267,7 +1301,7 @@
     keyed(track, empty ? [] : items, function (el, it, i) {
       var a = it.id ? app(it.id) : null, left = i * g.pitch, focus = tileFocus && i === anchor, sel = tileSel && i === anchor;
       var lifted = hs.lifted && i === anchor, partial = g.broad && (left - off < -1 || left + g.tw - off > g.shelf + 1);
-      setContent(el, it.kind + '|' + (it.id || '') + '|' + (it.id ? dockLabelSize(it.id) : full) + '|' + S.c.bg + '|' + S.c.apps + '|' + homeFont(), '<span class="tile-content">' + dockTileHtml(it, full) + '</span>');
+      setContent(el, it.kind + '|' + (it.id || '') + '|' + (it.id ? dockLabelSize(it.id) : full) + '|' + shownBg() + '|' + S.c.apps + '|' + homeFont(), '<span class="tile-content">' + dockTileHtml(it, full) + '</span>');
       el.className = 'tile k-' + it.kind + (focus ? ' is-focus' : '') + (sel ? ' is-sel' : '') + (lifted ? ' is-lifted' : '') + (partial ? ' is-partial' : '')
         + (a && !a.mark ? ' is-text' : '') + (it.kind === 'add' && full ? ' is-full' : '') + (it.kind === 'app' && S.press === it.id ? ' is-press' : '')
         + (lifted && i === 0 ? ' no-l' : '') + (lifted && i >= ns - 1 ? ' no-r' : '');
@@ -1346,7 +1380,7 @@
   function fieldTransform(el, x, y, width, height) {
     el._placement = { x: x, y: y, width: width, height: height };
     el.style.transformOrigin = (x + width / 2) + 'px ' + (y + height / 2) + 'px';
-    el.style.transform = 'translate3d(' + (-x) + 'px,' + (-y) + 'px,0)' + (S.c.bg === 'photo' && S.c.material === 'tint' && !REDUCED_MOTION ? ' scale(1.04)' : '');
+    el.style.transform = 'translate3d(' + (-x) + 'px,' + (-y) + 'px,0)' + (shownBg() === 'photo' && S.c.material === 'tint' && !REDUCED_MOTION ? ' scale(1.04)' : '');
   }
   function renderList(hs) {
     var items = hs.items, n = items.length, compact = hs.mode === 'arrange', pitch = compact ? PH_COMPACT_PITCH : PH_PITCH;
@@ -1371,7 +1405,7 @@
       var typography = photoLabel(it.id, compact), focus = rowFocus && i === anchor, lifted = hs.lifted && i === anchor, markImage, body = '';
       if (S.c.apps !== 'text') body += appMark(app(it.id), S.c.apps === 'icons' ? compact ? 64 : 88 : compact ? 60 : 84, S.c.apps === 'icons' ? compact ? 64 : 88 : compact ? 44 : 64, S.c.apps === 'icons' ? compact ? 52 : 72 : compact ? 42 : 54);
       if (S.c.apps !== 'icons') body += '<span class="ph-name" style="font-size:' + typography.size + 'px;top:' + typography.top + 'px">' + esc(app(it.id).name) + '</span>';
-      setContent(row, it.id + '|' + typography.size + '|' + S.c.bg + '|' + S.c.apps + '|' + homeFont(), '<span class="ph-group">' + body + '</span><span class="ph-move ph-move-up">' + icon('up') + '</span><span class="ph-move ph-move-down">' + icon('down') + '</span>');
+      setContent(row, it.id + '|' + typography.size + '|' + shownBg() + '|' + S.c.apps + '|' + homeFont(), '<span class="ph-group">' + body + '</span><span class="ph-move ph-move-up">' + icon('up') + '</span><span class="ph-move ph-move-down">' + icon('down') + '</span>');
       markImage = row.querySelector('.mark img');
       if (markImage) {
         markImage.onerror = function () { this.style.visibility = 'hidden'; };
@@ -1459,6 +1493,7 @@
       status = '<p class="setting-error">' + (error.type === 'save' ? 'Couldn’t save this change.' : error.type === 'font' ? 'Couldn’t load ' + esc(FONTS[error.font].name) + '.' : 'Couldn’t load this appearance.') + ' Your current choice is kept.</p>'
         + command({ action: 'settings.retry', label: 'Try again' }, '<span>Try again</span>', 'setting-retry');
     }
+    else if (t.group === 'night' && S.c.night !== 'off') status = '<p>' + (S.night ? 'Night look is on now. Home shows it when you leave Settings.' : 'Home changes at ' + hourLabel(S.c.nightStart) + ' and back at ' + hourLabel(S.c.nightEnd) + '.') + '</p>';
     setHTML(appearanceStatus, status);
     hint = selected.disabled ? '' : selected.action === 'settings.back' ? 'Return to ' + (t.group === 'rotation' ? 'Background' : 'Settings') : selected.action === 'settings.retry' ? 'Retry this change' : selected.axis ? 'Apply selected setting' : selected.action === 'background.wallpaper' ? 'Choose a wallpaper' : selected.action === 'background.rotation' ? 'Choose a rotation interval' : 'Open on the TV';
     setHTML(appearanceDesc, hint ? '<span class="remote-key">OK</span><span>' + esc(hint) + '</span>' : '');
@@ -1661,7 +1696,7 @@
 
   /* ---------- Atomic appearance bundles ---------- */
   var wallToken = 0, committedBundle = null, reflowToken = 0, fontSwitchToken = 0;
-  function registeredMaterial(id) { return S.c.bg === 'photo' && S.c.material === 'soft' && !!wall(id); }
+  function registeredMaterial(id) { return shownBg() === 'photo' && S.c.material === 'soft' && !!wall(id); }
   function matSrc(id, material) { return 'assets/materials/' + id + (material === 'soft' ? '-study-soft.jpg' : material === 'tint' ? '-field-clear.jpg' : '-field-frost.jpg'); }
   function fieldSrc(id, material) { return 'assets/materials/' + id + (material === 'soft' ? '-field-blur.jpg' : material === 'tint' ? '-field-clear.jpg' : '-field-frost.jpg'); }
   function makeImg(cls, src) { var im = document.createElement('img'); im.className = cls; im.alt = ''; im._src = src; im.src = src; return im; }
@@ -1786,7 +1821,7 @@
 
   /* ---------- Lifecycle and remote input ---------- */
   var clockTimer = 0, rotationTimer = 0, activeSince = 0, activeMs = 0, rotationKey = '';
-  function rotationActive() { return !document.hidden && top().id === 'home' && S.c.bg === 'photo' && !S.pending && mode().min > 0; }
+  function rotationActive() { return !document.hidden && top().id === 'home' && shownBg() === 'photo' && !S.pending && mode().min > 0; }
   function pauseRotation() {
     if (activeSince) { activeMs += Date.now() - activeSince; activeSince = 0; }
     clearTimeout(rotationTimer); rotationTimer = 0;
@@ -1808,7 +1843,7 @@
   }
   /* Idle dim runs only on photo Home; the first key or click after it only wakes. */
   var idleTimer = 0;
-  function idleAllowed() { return !document.hidden && top().id === 'home' && S.c.bg === 'photo' && !!IDLE_SECONDS[S.c.idle]; }
+  function idleAllowed() { return !document.hidden && top().id === 'home' && shownBg() === 'photo' && !!IDLE_SECONDS[S.c.idle]; }
   function wake() {
     S.idle = false; clearTimeout(idleTimer);
     if (idleAllowed()) idleTimer = setTimeout(function () { if (idleAllowed()) { S.idle = true; render(); } }, IDLE_SECONDS[S.c.idle] * QA.secondMs);
@@ -1818,6 +1853,7 @@
     clearTimeout(clockTimer);
     if (document.hidden) return;
     if (top().id === 'home' || isSettingsDetail(top())) renderCaption(top(), homeState(top()));
+    checkNight(true);
     clockTimer = setTimeout(updateClock, 60000 - (Date.now() % 60000) + 30);
   }
   function focusStage() { try { stage.focus({ preventScroll: true }); } catch (e) { stage.focus(); } }
@@ -1894,11 +1930,11 @@
   });
   document.addEventListener('keyup', function (ev) { delete heldKeys[ev.keyCode]; });
   window.addEventListener('blur', function () { heldKeys = {}; });
-  window.addEventListener('focus', function () { release(); focusStage(); after(); updateClock(); syncInstalled(); });
+  window.addEventListener('focus', function () { release(); focusStage(); S.night = nightNow(); after(); updateClock(); syncInstalled(); });
   document.addEventListener('visibilitychange', function () {
     heldKeys = {};
     if (document.hidden) { pauseRotation(); clearTimeout(clockTimer); clearTimeout(idleTimer); }
-    else { release(); after(); updateClock(); focusStage(); syncInstalled(); }
+    else { release(); S.night = nightNow(); after(); updateClock(); focusStage(); syncInstalled(); }
   });
   window.addEventListener('resize', fit);
 
@@ -1906,7 +1942,7 @@
   var NAV = { left: 'left', right: 'right', up: 'up', down: 'down', ok: 'ok', enter: 'ok', back: 'back', escape: 'back' };
   QA.state = function () {
     var out = serialise(S.c), t = top(), item = t.id === 'appearance' ? detailLocation(t).item : null;
-    out.idle = S.idle; out.committed = S.c; out.shown = S.shown; out.pending = S.pending; out.view = t.id; out.selected = S.sel;
+    out.idle = S.idle; out.night = { active: S.night, shown: nightShown(), bg: shownBg() }; out.committed = S.c; out.shown = S.shown; out.pending = S.pending; out.view = t.id; out.selected = S.sel;
     out.focusAction = focusedAction(); out.writes = S.writes; out.failedWrites = S.failed; out.error = S.err;
     out.catalog = { loading: catalog.loading, loaded: catalog.loaded, error: catalog.error, ids: ALPHA.slice() };
     out.fonts = { available: LOOK_VALUES.font.slice(), loaded: Object.keys(fontMetrics).filter(function (id) { return !fontMetrics[id].fallback; }), baselineFallback: !!(fontMetrics.manrope && fontMetrics.manrope.fallback), error: S.lookError && S.lookError.type === 'font' ? S.lookError : null };
@@ -1927,6 +1963,7 @@
   };
   QA.ready = function () { return fontsReady && !S.pending && !!S.shown && S.shown.bg === S.c.bg && S.shown.wall === S.c.wall && S.shown.font === S.c.font; };
   QA.nav = function () { var keys = arguments.length === 1 && Array.isArray(arguments[0]) ? arguments[0] : Array.prototype.slice.call(arguments); keys.forEach(function (key) { if (!NAV[key]) throw new Error('Unknown key'); press(NAV[key]); }); return QA.state(); };
+  QA.setHour = function (hour, animate) { QA.hour = hour; checkNight(!!animate); return QA.state(); };
   QA.look = function (patch) { setLook(patch, {}); return QA.state(); };
   QA.scene = function (name) { if (['home', 'apps', 'settings', 'appearance', 'editor'].indexOf(name) < 0) throw new Error('Unknown view'); goScene(name); return QA.state(); };
   QA.activate = function (action) { return activate(action) ? QA.state() : null; };
@@ -1935,6 +1972,7 @@
   /* ---------- Start ---------- */
   cueL.innerHTML = icon('left'); cueR.innerHTML = icon('right');
   initialise();
+  S.night = nightNow();
   setLook({}, { transient: true, startup: true });
   norm(); render(); fit(); focusStage(); updateClock(); syncRotation();
   syncInstalled();

@@ -14,7 +14,7 @@
 - A cold start shows the TV's own loading screen. A `<tizen:video_splash_screen>` declaration was tested on an owner's TV: without `video` the widget would not install, and with an H.264 video it installed but the TV still showed its default screen.
 ## Settings and appearance
 
-Settings opens a grouped overview: Background, Layout, Typography, Focus, Apps on Home and Samsung. OK opens a group. Appearance groups use a two-pane screen with visible choices on the left and the committed Home preview on the right.
+Settings opens a grouped overview: Background, Layout, Typography, Focus, Night, Apps on Home and Samsung. OK opens a group. Appearance groups use a two-pane screen with visible choices on the left and the committed Home preview on the right.
 
 | Group | Choices |
 | --- | --- |
@@ -22,6 +22,7 @@ Settings opens a grouped overview: Background, Layout, Typography, Focus, Apps o
 | Layout | List or Dock; independent Text, Icons or Both choices for apps and Home controls; 12-hour or 24-hour clock; date on or off |
 | Typography | Manrope, Neue Montreal, Mori, Pangram Sans, Geist and Newsreader, when available |
 | Focus | Type or Glass; Soft, Frost or Clear tint material |
+| Night | Off, Dark or Dimmed; Soft or Strong dimming; start hour 18:00–01:00 and end hour 05:00–10:00 |
 | Apps on Home | Membership and arrangement editor |
 | Samsung | Samsung Home and TV settings |
 
@@ -32,6 +33,12 @@ Material applies to a photographic Dock, or Glass focus on a photographic List. 
 A font or photo change applies only after its resources are ready and storage succeeds. A load or storage failure keeps the previous appearance and checkmark, with a Try again action. Back cancels a pending change, leaves the group and keeps completed changes. Late load callbacks cannot apply a cancelled choice. There is no Save button. Returning to a group restores its last choice focus; returning to Settings restores its category focus. Rotation is nested within Background, and Back returns to its Rotation row.
 
 The selected font applies to Home app names, the clock and Home controls, including Newsreader. Settings, All apps, the Home editor and status text retain Manrope. The preview shows the committed Home appearance and its clock continues to update. Pangram faces are available in Nathan's private build when the local files are present; their binaries are not included in the public source. An unavailable optional face is omitted. If the baseline font is slow or missing, Home remains usable with a local fallback and can recover when the font loads.
+
+## Night
+
+Settings → Night changes Home's look between set hours, 22:00 to 07:00 by default. Dark shows the Dark background. Dimmed keeps a photo background and darkens the photo, the Dock glass and focus fields together, by about 35% (Soft) or 55% (Strong); Light and Dark backgrounds show Dark. Hour labels follow the clock format. Night is off by default.
+
+The night look is temporary: the saved Background is unchanged and the Settings preview shows the daytime choices, with a note under the preview while night is on. On Home, a change at the start or end hour fades through black over about two seconds, or switches instantly with reduced motion. Returning from another app shows the current look without a fade. With Dark, rotation and idle dim pause because no photo is shown; with Dimmed they continue.
 
 ## Streaming apps
 

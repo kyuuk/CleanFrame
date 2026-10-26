@@ -917,6 +917,35 @@ try {
     await nav('up'); await act('util.settings'); await current.waitForTimeout(900);
     check('Panels never dim', !(await state()).idle);
   });
+  await run('Night look', async () => {
+    await page(); await call('setHour', 12); await group('night');
+    check('Night is off by default with no hour rows', !(await call('actions')).includes('choice.nightStart.22'));
+    await act('choice.night.dark');
+    check('Night look and default hours are saved', (await stored()).night === 'dark' && (await stored()).nightStart === '22' && (await stored()).nightEnd === '7');
+    check('Hour labels follow the 12-hour clock', await current.locator('[data-action="choice.nightStart.22"]').getAttribute('aria-label') === '10 PM');
+    await act('choice.nightStart.23'); await act('choice.nightEnd.6');
+    check('Hours are saved', (await stored()).nightStart === '23' && (await stored()).nightEnd === '6');
+    await scene('home'); await call('setHour', 23);
+    let st = await state();
+    check('Dark night shows Dark without changing the saved Background', st.night.shown && st.night.bg === 'dark' && st.look.bg === 'photo' && await current.locator('#stage.bg-dark').count() === 1);
+    await scene('settings'); await act('settings.group.background');
+    check('Settings preview keeps the daytime look', await current.locator('#stage.bg-photo').count() === 1);
+    await scene('home'); await call('setHour', 3);
+    check('Night after midnight still applies', (await state()).night.shown);
+    await call('setHour', 6);
+    check('Day returns at the end hour', !(await state()).night.active && await current.locator('#stage.bg-photo').count() === 1);
+    await group('night'); await act('choice.night.dim'); await act('choice.nightDim.strong'); await scene('home'); await call('setHour', 23);
+    check('Dim photo keeps the photo and dims it', await current.locator('#stage.bg-photo.night-dim.night-strong').count() === 1);
+    await look({ bg: 'light' }); await scene('home');
+    check('Dim photo turns Light into Dark', (await state()).night.bg === 'dark');
+    await look({ bg: 'photo', clock: '24h' }); await scene('home'); await call('setHour', 12);
+    await group('night'); await act('choice.night.dark');
+    check('Hour labels follow the 24-hour clock', await current.locator('[data-action="choice.nightStart.23"]').getAttribute('aria-label') === '23:00');
+    await scene('home'); await call('setHour', 23, true);
+    check('Night change fades through black on Home', await current.locator('#stage.is-night-fade').count() === 1 && !(await state()).night.shown);
+    await current.waitForFunction(() => ShoreQA.state().night.shown, null, { timeout: 3000 });
+    check('Fade ends on the night look', await current.locator('#stage.is-night-fade').count() === 0 && (await state()).night.bg === 'dark');
+  });
   await run('Open rotation and browser fallback', async () => {
     await page({ seed: baseline({ mode: 'open' }) }); check('Open mode advances at cold start', (await state()).wallpaper === walls[1].id);
     const first = (await state()).wallpaper;
