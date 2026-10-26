@@ -899,6 +899,17 @@ try {
     const bag = (await stored()).bag;
     check('Shuffle bag is saved for the next start', Array.isArray(bag) && !bag.includes((await stored()).wallpaper));
   });
+  await run('Home controls leave no app marked', async () => {
+    for (const layout of ['dock', 'list']) {
+      await page(); await look({ layout }); await scene('home'); await nav(layout === 'dock' ? 'up' : 'right');
+      check(layout + ': a Home control has the only focus', (await state()).focusAction.startsWith('util.') && (await call('where')).focusCount === 1);
+      const marked = await current.evaluate(() => document.querySelectorAll('#stage .tile.is-sel, #stage .ph-row.is-sel, #stage .plate.on-sel, #stage .ph-plate.on-sel').length);
+      check(layout + ': no app keeps a selected plate', marked === 0, marked);
+      await nav(layout === 'dock' ? 'down' : 'left');
+      check(layout + ': returning restores the app focus', (await state()).focusAction === 'home.app.' + (await state()).selected);
+      await closePage();
+    }
+  });
   await run('Idle dim', async () => {
     await page({ secondMs: 20 }); await group('background');
     await act('choice.idle.30s'); check('Idle dim is saved', (await stored()).idle === '30s');
