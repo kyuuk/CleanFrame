@@ -8,6 +8,7 @@ class Control {
  const string Target="nClrkHome1.FrameHome";
  static readonly string[] Keys={"db/appfw/home_appid","db/appfw/startup_appid","db/appfw/booting_appid_backup","db/first_screen/type"};
  const string AutoKey="db/menu/smart_hub/ontvsetting/auto_start";
+ static readonly string[] Firmware={"Version=T-PTMDUABC-0090-2130.0;","Version=T-24RSSFUCVTDEUC-1241.0;"};
  [DllImport("libbundle.so.0")] static extern IntPtr bundle_create();
  [DllImport("libbundle.so.0")] static extern void bundle_free(IntPtr b);
  [DllImport("libaul.so.0")] static extern int aul_svc_set_operation(IntPtr b,string op);
@@ -32,15 +33,21 @@ class Control {
  static int Main(string[] args){
   try{
    if(IntPtr.Size!=4||getuid()!=901)throw new Exception("Expected 32-bit SDK user, no root");
-   var info=File.ReadAllText("/etc/prd_info.ini");if(!info.Contains("Version=T-PTMDUABC-0090-2130.0;"))throw new Exception("Unexpected firmware");
+   var info=File.ReadAllText("/etc/prd_info.ini");if(!Array.Exists(Firmware,info.Contains))throw new Exception("Unexpected firmware");
+   // On the Tizen 8 TV the eligibility call returns 0 for every app, YouTube and Netflix included, and this process cannot read package
+   // manifests; apply.sh confirms the installed boot metadata those apps declare and passes boot-metadata.
+   bool metadataEligibility=info.Contains(Firmware[1]);
    if(args.Length==1&&args[0]=="query"){Console.WriteLine("CLEANFRAME_HOME_JSON="+JsonSerializer.Serialize(Query()));return 0;}
-   if(args.Length!=2||(args[0]!="apply"&&args[0]!="restore"))throw new Exception("Use query, apply SNAPSHOT, or restore SNAPSHOT");
+   if(args.Length>1&&args[0]=="eligible"){for(int i=1;i<args.Length;i++)Console.WriteLine("CLEANFRAME_HOME_ELIGIBLE "+args[i]+"="+util_is_appbooting_supported_webapp_byappid(args[i]));return 0;}
+   if(args.Length<2||args.Length>3||(args[0]!="apply"&&args[0]!="restore"))throw new Exception("Use query, eligible APPID..., apply SNAPSHOT, or restore SNAPSHOT");
    var original=JsonSerializer.Deserialize<Snapshot>(File.ReadAllText(args[1]));CheckSnapshot(original);var before=Query();
    if(before.Home!=original.Home&&before.Home!=Target)throw new Exception("Home changed since snapshot; stop for review");
    if(args[0]=="restore"){Restore(original);Console.WriteLine("CLEANFRAME_HOME_RESTORED="+JsonSerializer.Serialize(Query()));return 0;}
    if(before.Home!=original.Home||before.Autostart!=original.Autostart)throw new Exception("Configuration changed since snapshot");
    foreach(var k in Keys)if(before.Strings[k]!=original.Strings[k])throw new Exception("Setting changed since snapshot: "+k);
-   if(!Directory.Exists("/opt/usr/apps/nClrkHome1")||before.BootSupported==0)throw new Exception("Installed launcher is not eligible for boot");
+   if(!Directory.Exists("/opt/usr/apps/nClrkHome1"))throw new Exception("Installed launcher folder not found");
+   if(metadataEligibility&&(args.Length!=3||args[2]!="boot-metadata"))throw new Exception("Installed launcher manifest lacks appbootingsupport metadata (checked by apply.sh)");
+   if(!metadataEligibility&&before.BootSupported==0)throw new Exception("Installed launcher is not eligible for boot");
    try{SetHome(Target);SetString("db/appfw/home_appid",Target);SetAuto(1);Console.WriteLine("CLEANFRAME_HOME_APPLIED="+JsonSerializer.Serialize(Query()));}
    catch{Restore(original);Console.Error.WriteLine("Original Home/startup values restored after a failed apply");throw;}
    return 0;

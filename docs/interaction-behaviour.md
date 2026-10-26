@@ -9,7 +9,8 @@
 - Back from the app list or Dock opens a choice to stay or open Samsung Home.
 - A panel keeps focus within its own controls. Back closes one panel at a time.
 - Returning to the running launcher keeps the selected app or panel item. There is no auto-return timer. Held OK and Back keys act once until the key is released.
-
+- The manifest sets `reload="disable"` for Smart Hub resume (`eden_resume`) and default launch requests, so opening CleanFrame's icon while it is still running resumes it instead of reloading the page. `background-support="enable"` keeps the hidden launcher alive, which removed the TV's loading screen on resume in an owner's Smart Hub test. Clock and rotation timers still stop while hidden. The TV can still close a hidden app, for example under memory pressure; it then starts fresh with its saved preferences.
+- A cold start shows the TV's own loading screen. A `<tizen:video_splash_screen>` declaration was tested on an owner's TV: without `video` the widget would not install, and with an H.264 video it installed but the TV still showed its default screen.
 ## Settings and appearance
 
 Settings opens a grouped overview: Background, Layout, Typography, Focus, Apps on Home and Samsung. OK opens a group. Appearance groups use a two-pane screen with visible choices on the left and the committed Home preview on the right.

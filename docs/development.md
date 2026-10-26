@@ -37,6 +37,8 @@ This Mac's setup lives under `.local/` and is excluded from Git:
 
 The SDK requires a terminal when it prompts for certificate passwords and whether to save them. The packaging script supplies the generated certificate password from the ignored private file and declines the optional password-saving prompts. It redacts that password from output. Login credentials are not required for routine packaging.
 
+On Windows, the SDK's Java console cannot prompt under a pipe. `npm run package` instead encrypts the password for the current Windows user with the SDK's `wincrypt.exe`, signs with a temporary profile copy that references it, then deletes both. To use an installed Tizen Studio rather than `.local/tizen-sdk` for packaging, `tv:*` commands and the native Home runner, set `CLEANFRAME_TIZEN_SDK` (for example `$env:CLEANFRAME_TIZEN_SDK = 'C:\tizen-studio'`); the script leaves that installation's `sdk.info` unchanged. On every platform it restores the CLI's previous `default.profiles.path` afterwards. A wrong password produces no console output on Windows; the failure message names the SDK's `cli.log`.
+
 The initial custom XML-signature implementation was rejected by the TV. Use the official SDK packager for future builds; the installed test was signed with Tizen CLI 2.5.25.
 
 ## Another checkout or Mac
@@ -69,7 +71,7 @@ For developer access, connect the TV and Mac to the same network, enable Develop
 
 Native Home/startup was configured separately from the app installer. Physical Home from Netflix is confirmed. The one-shot helper runs as the SDK user. See scripts/native-home/README.md and docs/tv-status.md for the tested firmware and pending visual checks.
 
-Query with `python3 scripts/native-home/run.py query`. Restore the saved pre-integration Home/startup values with `python3 scripts/native-home/run.py restore`. The private baseline is `.local/native-home/original.json`; preserve it and do not replace it with the applied state. The legacy `.local/native-home/run.py` command is also retained. Restore before uninstalling CleanFrame or changing its stable app identity.
+Query with `python3 scripts/native-home/run.py query`. Restore the saved pre-integration Home/startup values with `python3 scripts/native-home/run.py restore`. The private baseline is `.local/native-home/original.json`; preserve it and do not replace it with the applied state. A new installation records it once, before apply, with `python3 scripts/native-home/run.py record`. The legacy `.local/native-home/run.py` command is also retained. Restore before uninstalling CleanFrame or changing its stable app identity.
 
 To rebuild the one-shot helper with this Mac's private verified SDK:
 

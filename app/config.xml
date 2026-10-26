@@ -2,6 +2,14 @@
 <widget xmlns="http://www.w3.org/ns/widgets" xmlns:tizen="http://tizen.org/ns/widgets" id="https://local.frame-home/app" version="0.6.1" viewmodes="maximized">
   <tizen:application id="nClrkHome1.FrameHome" package="nClrkHome1" required_version="6.5"/>
   <content src="index.html"/>
+  <tizen:app-control>
+    <tizen:src name="index.html" reload="disable"/>
+    <tizen:operation name="http://samsung.com/appcontrol/operation/eden_resume"/>
+  </tizen:app-control>
+  <tizen:app-control>
+    <tizen:src name="index.html" reload="disable"/>
+    <tizen:operation name="http://tizen.org/appcontrol/operation/default"/>
+  </tizen:app-control>
   <name>CleanFrame</name>
   <icon src="icon.png"/>
   <feature name="http://tizen.org/feature/screen.size.normal.1080.1920"/>
@@ -9,5 +17,6 @@
   <tizen:privilege name="http://tizen.org/privilege/application.launch"/>
   <tizen:privilege name="http://tizen.org/privilege/application.info"/>
   <tizen:privilege name="http://tizen.org/privilege/tv.inputdevice"/>
-  <tizen:setting screen-orientation="landscape" context-menu="disable" background-support="disable" encryption="disable" install-location="auto" hwkey-event="enable"/>
+  <tizen:metadata key="http://samsung.com/tv/metadata/appbootingsupport"/>
+  <tizen:setting screen-orientation="landscape" context-menu="disable" background-support="enable" encryption="disable" install-location="auto" hwkey-event="enable"/>
 </widget>
