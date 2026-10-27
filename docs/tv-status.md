@@ -1,6 +1,6 @@
 # Reference TV and verification status
 
-Recorded through 20 October 2026. These results describe the maintainer's TV. Other models, firmware and operating systems need their own checks. Repo-only work must not contact the TV.
+Recorded through 27 October 2026. These results describe the maintainer's TV, plus a second Tizen 8 TV in its own section. Other models, firmware and operating systems need their own checks. Repo-only work must not contact the TV.
 
 ## Hardware and OS
 
@@ -38,7 +38,11 @@ Browser and package checks establish source behaviour and archive contents. CPU-
 
 ## Second TV: Tizen 8
 
-An owner's ED50T01UHD-RE (firmware T-24RSSFUCVTDEUC-1241.0, Tizen 8) is not a Frame. Its installed-app list on 26 October had no `org.tizen.art-app`, so CleanFrame hides Art Mode there. It has `com.samsung.tv.coba.setting`, but TV settings opened through it did not work; the owner confirmed that launching `org.tizen.menu` shows the settings menu. The updated build has not yet been installed on this TV.
+An owner's ED50T01UHD-RE (firmware T-24RSSFUCVTDEUC-1241.0, Tizen 8) is not a Frame. Its installed-app list on 26 October had no `org.tizen.art-app`, so CleanFrame hides Art Mode there. It has `com.samsung.tv.coba.setting`, but TV settings opened through it did not work; the owner confirmed that launching `org.tizen.menu` shows the settings menu.
+
+CleanFrame keeps the `nClrkHome1.FrameHome` identity on this TV. The owner installs it with Apps2Samsung, which signs it with the owner's own author and distributor certificates; keep that author certificate for in-place updates.
+
+Native Home was configured on 26 October with the same helper. The original values were recorded privately before apply, and exact-value restore passed. This firmware's boot-eligibility function returns 0 for every app, so apply relies on the installed manifest's `appbootingsupport` metadata. The applied readback assigns CleanFrame to Home, startup and boot-backup, with Home autostart enabled; the first-screen type still names Samsung Home. The owner confirmed that the physical Home button opens CleanFrame and that the TV boots into it. The recovery rules in the next section apply to this TV too.
 
 ## Native Home and recovery
 

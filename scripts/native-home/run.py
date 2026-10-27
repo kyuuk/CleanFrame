@@ -22,7 +22,7 @@ if not sdb.exists():raise SystemExit('SDB not found at '+str(sdb)+'; set CLEANFR
 sdb=str(sdb)
 host=json.loads((r/'.local/device.json').read_text())['host'];ipaddress.ip_address(host)
 with urllib.request.urlopen('http://'+host+':8001/api/v2/',timeout=4) as response: info=json.load(response)
-# Reference Frame, then a contributor's Tizen 8 TV (inspected only); Control.cs guards the matching firmware.
+# Reference Frame, then a contributor's Tizen 8 TV (applied 26 October 2026); Control.cs guards the matching firmware.
 if info.get('device',{}).get('modelName') not in ['QA55LS03DAWXXY','ED50T01UHD-RE']:raise SystemExit('Model guard failed; nothing staged.')
 serial=host+':26101'
 def run(args,timeout=12):
